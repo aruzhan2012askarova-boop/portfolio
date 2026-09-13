@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Room</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .statia-box {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+
+                <h2 class="text-center mb-4">Блог (Вы: {{ current_user.name }})</h2>
+
+                <!-- Системные уведомления -->
+                {% if messages %}
+                    {% for msg in messages %}
+                        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+                            {{ msg }}
+                            {% if msg.tags == "warning" and request.session.last_deleted_content %}
+                                <a href="{% url 'undo_delete' %}" class="alert-link ms-2">Отменить удаление</a>
+                            {% endif %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Список статей -->
+                <div class="card mb-4">
+                    <div class="card-body statia-box">
+                        <ul class="list-group list-group-flush">
+                            {% for article in articles %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h4 class="mb-1">{{ article.title }}</h4>
+                                        <p class="mb-1"><strong>{{ article.user.name }}</strong>: {{ article.content }}</p>
+                                        <small class="text-muted">{{ article.timestamp|date:"d.m.Y H:i:s" }}</small>
+                                    </div>
+
+                                    <!-- Кнопки управления -->
+                                    {% if article.user == current_user and not current_user.is_guest %}
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ article.id }}">
+                                                Изменить
+                                            </button>
+
+                                            <form method="post" class="d-inline ms-1">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="delete_article_id" value="{{ article.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                                            </form>
+                                        </div>
+                                        <!-- Модальное окно редактирования -->
+                                        <div class="modal fade" id="editModal{{ article.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Редактировать статью</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <div class="modal-body text-start">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Заголовок</label>
+                                                                <input type="text" name="title" class="form-control" value="{{ article.title }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Текст статьи</label>
+                                                                <textarea name="content" class="form-control" rows="4" required>{{ article.content }}</textarea>
+                                                            </div>
+                                                            <input type="hidden" name="edit_article_id" value="{{ article.id }}">
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-center text-muted">Статей пока нет.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Форма отправки статьи / Блок ограничения доступа -->
+                {% if not current_user.is_guest %}
+                    <form method="post" class="card card-body">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Заголовок</label>
+                            {{ form.title }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Текст статьи</label>
+                            {{ form.content }}
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Опубликовать</button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-secondary text-center" role="alert">
+                        Вы вошли как <strong>Гость</strong>. Чтобы публиковать и редактировать статьи, <a href="{% url 'register' %}" class="alert-link">зарегистрируйтесь или войдите под своим именем</a>.
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
